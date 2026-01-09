@@ -12,10 +12,14 @@ class Settings(BaseSettings):
     R2_ACCOUNT_ID: str
     R2_ACCESS_KEY_ID: str
     R2_SECRET_ACCESS_KEY: str
-    R2_BUCKET_NAME: str = "google-ads-conversions"
+    R2_BUCKET_NAME: str
     
     # API Security
-    API_KEY: str = "your-secret-api-key-change-this"
+    API_KEY: str
+    
+    # Dashboard Authentication
+    DASHBOARD_USERNAME: str
+    DASHBOARD_PASSWORD: str 
     
     # Conversion Settings
     CONVERSION_NAME: str = "purchase"

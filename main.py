@@ -11,6 +11,7 @@ import uvicorn
 from config import settings
 from models import PostbackRequest, ConversionResponse
 from csv_handler import CSVHandler
+from auth import authenticate_dashboard, get_security_stats
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -27,8 +28,8 @@ csv_handler = CSVHandler()
 
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    """Dashboard de monitoramento"""
+async def dashboard(request: Request, username: str = Depends(authenticate_dashboard)):
+    """Dashboard de monitoramento com autenticação segura"""
     try:
         # Get all customer IDs
         customer_ids = csv_handler.get_all_customer_ids()
@@ -47,6 +48,9 @@ async def dashboard(request: Request):
                 'csv_url': csv_url
             })
         
+        # Log successful dashboard access
+        print(f"✅ Dashboard acessado por usuário autenticado: {username}")
+        
         return templates.TemplateResponse(
             "index.html",
             {
@@ -54,11 +58,12 @@ async def dashboard(request: Request):
                 "total_conversions": total_conversions,
                 "total_accounts": len(customer_ids),
                 "stats": stats,
-                "app_name": settings.APP_NAME
+                "app_name": settings.APP_NAME,
+                "authenticated_user": username
             }
         )
     except Exception as e:
-        print(f"Error loading dashboard: {e}")
+        print(f"❌ Error loading dashboard: {e}")
         return HTMLResponse(
             content=f"<h1>Error loading dashboard</h1><p>{str(e)}</p>",
             status_code=500
