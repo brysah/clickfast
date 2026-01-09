@@ -1,7 +1,7 @@
 """
 FastAPI application for Google Ads Offline Conversions
 """
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Depends
 from fastapi.responses import Response, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from datetime import datetime
