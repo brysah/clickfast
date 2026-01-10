@@ -132,15 +132,11 @@ class CSVHandler:
         if existing_csv:
             # Append to existing CSV
             lines = existing_csv.strip().split('\n')
-            # Keep header and parameters
-            header_lines = [line for line in lines if line.startswith('Parameters:') or line.startswith('Google Click ID')]
+            # Remove Parameters:TimeZone if present, keep only header and data
+            header_lines = [line for line in lines if line.startswith('Google Click ID')]
             data_lines = [line for line in lines if not line.startswith('Parameters:') and not line.startswith('Google Click ID') and line.strip()]
-            
-            # Create new row - empty string for missing conversion value
             value = str(conversion_value) if conversion_value is not None else ""
             new_row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY}"
-            
-            # Rebuild CSV - Google Ads format
             csv_content = '\n'.join(header_lines) + '\n' + '\n'.join(data_lines + [new_row])
         else:
             # Create new CSV with header
@@ -163,14 +159,10 @@ class CSVHandler:
         Returns:
             CSV content as string
         """
-        # Header format exactly as Google Ads requires
-        header = f"Parameters:TimeZone={settings.TIMEZONE}\n"
-        header += "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
-        
-        # Data row - empty string for missing conversion value (not 0)
+        # Header without Parameters:TimeZone (Google Ads format)
+        header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
         value = str(conversion_value) if conversion_value is not None else ""
         row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY}"
-        
         return header + row
     
     def get_csv_content(self, ctid: str) -> Optional[str]:
