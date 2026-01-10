@@ -118,6 +118,7 @@ class CSVHandler:
             dt = datetime.fromisoformat(conversion_time.replace('Z', '+00:00'))
             # Convert to configured timezone
             dt_local = dt.astimezone(self.timezone)
+            # Google Ads requires format: yyyy-MM-dd HH:mm:ss (with timezone in Parameters)
             formatted_time = dt_local.strftime('%Y-%m-%d %H:%M:%S')
         except Exception as e:
             print(f"Error parsing datetime: {e}")
@@ -135,10 +136,11 @@ class CSVHandler:
             header_lines = [line for line in lines if line.startswith('Parameters:') or line.startswith('Google Click ID')]
             data_lines = [line for line in lines if not line.startswith('Parameters:') and not line.startswith('Google Click ID') and line.strip()]
             
-            # Create new row
-            new_row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{conversion_value if conversion_value else ''},{settings.CURRENCY}"
+            # Create new row - empty string for missing conversion value
+            value = str(conversion_value) if conversion_value is not None else ""
+            new_row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY}"
             
-            # Rebuild CSV
+            # Rebuild CSV - Google Ads format
             csv_content = '\n'.join(header_lines) + '\n' + '\n'.join(data_lines + [new_row])
         else:
             # Create new CSV with header
@@ -151,18 +153,23 @@ class CSVHandler:
                        conversion_value: Optional[float] = None) -> str:
         """
         Create a new CSV with header and first row
+        Following Google Ads official format specification
         
         Args:
             gclid: Google Click ID
-            formatted_time: Formatted datetime string
+            formatted_time: Formatted datetime string (yyyy-MM-dd HH:mm:ss)
             conversion_value: Optional conversion value
             
         Returns:
             CSV content as string
         """
+        # Header format exactly as Google Ads requires
         header = f"Parameters:TimeZone={settings.TIMEZONE}\n"
         header += "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
-        row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{conversion_value if conversion_value else ''},{settings.CURRENCY}"
+        
+        # Data row - empty string for missing conversion value (not 0)
+        value = str(conversion_value) if conversion_value is not None else ""
+        row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY}"
         
         return header + row
     
