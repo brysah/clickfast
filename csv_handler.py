@@ -72,27 +72,23 @@ class R2Storage:
     
     def get_public_url(self, ctid: str) -> str:
         """
-        Generate public URL for CSV file
+        Generate public URL for CSV file with API key in path
+        Compatible with Google Ads (ends in .csv)
         
         Args:
             ctid: Customer ID
             
         Returns:
-            Public URL to access the CSV
+            Public URL to access the CSV (format: /csv/{api_key}/{ctid}.csv)
         """
-        # Note: You'll need to configure R2 bucket with public access or custom domain
-        # For now, we'll use presigned URL (valid for 7 days)
-        key = f"{ctid}.csv"
-        try:
-            url = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': key},
-                ExpiresIn=604800  # 7 days
-            )
-            return url
-        except Exception as e:
-            print(f"Error generating URL for {ctid}: {e}")
-            return ""
+        # For Railway or production, you'll need to set APP_URL environment variable
+        # Example: https://seu-app.railway.app
+        app_url = getattr(settings, 'APP_URL', 'http://localhost:8000')
+        
+        # Build URL with API key in path and .csv extension
+        url = f"{app_url}/csv/{settings.API_KEY}/{ctid}.csv"
+        
+        return url
 
 
 class CSVHandler:

@@ -153,21 +153,24 @@ async def receive_postback(
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 
-@app.get("/csv/{ctid}")
+@app.get("/csv/{api_key}/{ctid}.csv")
 async def get_csv(
-    ctid: str,
-    api_key: str = Query(..., description="API Key para autenticação")
+    api_key: str,
+    ctid: str
 ):
     """
     Retorna o CSV para uma conta específica
+    URL termina em .csv para compatibilidade com Google Ads
     
     Parâmetros:
+    - api_key: Chave de API para autenticação (no path)
     - ctid: Customer ID do Google Ads
-    - api_key: Chave de API para autenticação
+    
+    Exemplo: /csv/sua-api-key/7871141994.csv
     """
     # Validate API key
     if api_key != settings.API_KEY:
-        print(f"❌ Tentativa de acesso não autorizado ao CSV {ctid}")
+        print(f"❌ Tentativa de acesso não autorizado ao CSV {ctid} com API key inválida")
         raise HTTPException(status_code=401, detail="API Key inválida")
     
     # Get CSV content
@@ -176,7 +179,7 @@ async def get_csv(
     if csv_content is None:
         raise HTTPException(status_code=404, detail=f"CSV não encontrado para conta {ctid}")
     
-    print(f"📥 CSV acessado - CTID: {ctid}")
+    print(f"📥 CSV acessado com sucesso - CTID: {ctid}")
     
     # Return CSV as downloadable file
     return Response(

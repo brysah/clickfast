@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     
     # Application Settings
     APP_NAME: str = "Google Ads Offline Conversions"
+    APP_URL: str = "http://localhost:8000"
     DEBUG: bool = False
     
     class Config:
