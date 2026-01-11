@@ -92,6 +92,21 @@ class R2Storage:
 
 
 class CSVHandler:
+        def create_empty_source(self, src: str) -> bool:
+            """
+            Cria um CSV vazio (apenas com header) para um src (conta), caso ainda não exista.
+            Retorna True se criado com sucesso ou já existir, False em caso de erro.
+            """
+            existing_csv = self.storage.get_csv(src)
+            if existing_csv:
+                # Já existe, não sobrescreve
+                return True
+            header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
+            try:
+                return self.storage.save_csv(src, header)
+            except Exception as e:
+                print(f"Erro ao criar CSV vazio para {src}: {e}")
+                return False
     """Handles CSV operations for Google Ads conversions"""
     
     def __init__(self):

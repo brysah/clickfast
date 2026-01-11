@@ -199,12 +199,22 @@
         
         <div class="accounts-section">
             <h2>Contas Google Ads</h2>
-            
+
+            <!-- Formulário para adicionar nova conta -->
+            <form method="post" action="/add-source" style="margin-bottom: 30px; display: flex; gap: 10px; align-items: center;">
+                <input type="text" name="src" placeholder="ID da nova conta (src)" required style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1em;">
+                <button type="submit" style="padding: 10px 20px; border-radius: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: bold; cursor: pointer;">Adicionar Conta</button>
+            </form>
+
+            {% if add_source_msg %}
+                <div style="margin-bottom: 20px; padding: 12px; background: #e6ffe6; border: 1px solid #b2f2b2; border-radius: 8px; color: #225522; font-weight: 500;">{{ add_source_msg }}</div>
+            {% endif %}
+
             {% if stats %}
                 {% for account in stats %}
                 <div class="account-card">
                     <div class="account-header">
-                        <div class="account-id">🎯 Conta: {{ account.ctid }}</div>
+                        <div class="account-id">🎯 Conta: {{ account.src }}</div>
                         <div class="conversion-count">{{ account.count }} conversões</div>
                     </div>
                     <a href="{{ account.csv_url }}" class="csv-link" target="_blank">

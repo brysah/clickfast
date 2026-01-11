@@ -1,3 +1,47 @@
+
+# Endpoint para adicionar uma nova conta (src) e criar CSV vazio
+from fastapi import Form
+
+@app.post("/add-source")
+async def add_source(request: Request, src: str = Form(...), username: str = Depends(authenticate_dashboard)):
+    """Adiciona uma nova conta (src) criando um CSV vazio se não existir."""
+    try:
+        created = csv_handler.create_empty_source(src)
+        if created:
+            msg = f"Conta '{src}' adicionada com sucesso."
+        else:
+            msg = f"Erro ao adicionar conta '{src}'."
+        # Recarrega dashboard com mensagem
+        sources = csv_handler.get_all_sources()
+        stats = []
+        total_conversions = 0
+        for s in sources:
+            count = csv_handler.get_conversion_count(s)
+            total_conversions += count
+            csv_url = csv_handler.get_csv_url(s)
+            stats.append({
+                'src': s,
+                'count': count,
+                'csv_url': csv_url
+            })
+        return templates.TemplateResponse(
+            "index.html",
+            {
+                "request": request,
+                "total_conversions": total_conversions,
+                "total_accounts": len(sources),
+                "stats": stats,
+                "app_name": settings.APP_NAME,
+                "authenticated_user": username,
+                "add_source_msg": msg
+            }
+        )
+    except Exception as e:
+        print(f"❌ Erro ao adicionar conta: {e}")
+        return HTMLResponse(
+            content=f"<h1>Erro ao adicionar conta</h1><p>{str(e)}</p>",
+            status_code=500
+        )
 """
 FastAPI application for Google Ads Offline Conversions
 """
