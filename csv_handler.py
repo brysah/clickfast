@@ -26,7 +26,7 @@ class R2Storage:
         )
         self.bucket_name = settings.R2_BUCKET_NAME
         
-    def get_csv(self, ctid: str) -> Optional[str]:
+    def get_csv(self, src: str) -> Optional[str]:
         """
         Retrieve CSV content from R2
         
@@ -36,7 +36,7 @@ class R2Storage:
         Returns:
             CSV content as string, or None if file doesn't exist
         """
-        key = f"{ctid}.csv"
+        key = f"{src}.csv"
         try:
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
             return response['Body'].read().decode('utf-8')
@@ -46,7 +46,7 @@ class R2Storage:
             print(f"Error retrieving CSV for {ctid}: {e}")
             return None
     
-    def save_csv(self, ctid: str, csv_content: str) -> bool:
+    def save_csv(self, src: str, csv_content: str) -> bool:
         """
         Save CSV content to R2
         
@@ -57,7 +57,7 @@ class R2Storage:
         Returns:
             True if successful, False otherwise
         """
-        key = f"{ctid}.csv"
+        key = f"{src}.csv"
         try:
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
@@ -70,7 +70,7 @@ class R2Storage:
             print(f"Error saving CSV for {ctid}: {e}")
             return False
     
-    def get_public_url(self, ctid: str) -> str:
+    def get_public_url(self, src: str) -> str:
         """
         Generate public URL for CSV file with API key in path
         Compatible with Google Ads (ends in .csv)
@@ -86,7 +86,7 @@ class R2Storage:
         app_url = getattr(settings, 'APP_URL', 'http://localhost:8000')
         
         # Build URL with API key in path and .csv extension
-        url = f"{app_url}/csv/{settings.API_KEY}/{ctid}.csv"
+        url = f"{app_url}/csv/{settings.API_KEY}/{src}.csv"
         
         return url
 
@@ -99,7 +99,7 @@ class CSVHandler:
         self.storage = R2Storage()
         self.timezone = pytz.timezone(settings.TIMEZONE)
     
-    def add_conversion(self, ctid: str, gclid: str, conversion_time: str, 
+    def add_conversion(self, src: str, gclid: str, conversion_time: str, 
                       conversion_value: Optional[float] = None) -> bool:
         """
         Add a conversion to the CSV file
@@ -127,7 +127,7 @@ class CSVHandler:
             formatted_time = dt_local.strftime('%Y-%m-%d %H:%M:%S')
         
         # Get existing CSV or create new one
-        existing_csv = self.storage.get_csv(ctid)
+        existing_csv = self.storage.get_csv(src)
         
         if existing_csv:
             # Append to existing CSV
@@ -143,7 +143,7 @@ class CSVHandler:
             csv_content = self._create_new_csv(gclid, formatted_time, conversion_value)
         
         # Save to R2
-        return self.storage.save_csv(ctid, csv_content)
+        return self.storage.save_csv(src, csv_content)
     
     def _create_new_csv(self, gclid: str, formatted_time: str, 
                        conversion_value: Optional[float] = None) -> str:
@@ -165,7 +165,7 @@ class CSVHandler:
         row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY}"
         return header + row
     
-    def get_csv_content(self, ctid: str) -> Optional[str]:
+    def get_csv_content(self, src: str) -> Optional[str]:
         """
         Get CSV content for a customer ID
         
@@ -175,9 +175,9 @@ class CSVHandler:
         Returns:
             CSV content as string, or None if not found
         """
-        return self.storage.get_csv(ctid)
+        return self.storage.get_csv(src)
     
-    def get_csv_url(self, ctid: str) -> str:
+    def get_csv_url(self, src: str) -> str:
         """
         Get public URL for CSV file
         
@@ -187,9 +187,9 @@ class CSVHandler:
         Returns:
             Public URL
         """
-        return self.storage.get_public_url(ctid)
+        return self.storage.get_public_url(src)
     
-    def get_all_customer_ids(self) -> List[str]:
+    def get_all_sources(self) -> List[str]:
         """
         Get list of all customer IDs that have CSV files
         
@@ -201,19 +201,18 @@ class CSVHandler:
             if 'Contents' not in response:
                 return []
             
-            ctids = []
+            srcs = []
             for obj in response['Contents']:
                 key = obj['Key']
                 if key.endswith('.csv'):
-                    ctid = key.replace('.csv', '')
-                    ctids.append(ctid)
-            
-            return sorted(ctids)
+                    src = key.replace('.csv', '')
+                    srcs.append(src)
+            return sorted(srcs)
         except Exception as e:
             print(f"Error listing customer IDs: {e}")
             return []
     
-    def get_conversion_count(self, ctid: str) -> int:
+    def get_conversion_count(self, src: str) -> int:
         """
         Get number of conversions for a customer ID
         
@@ -223,7 +222,7 @@ class CSVHandler:
         Returns:
             Number of conversions
         """
-        csv_content = self.storage.get_csv(ctid)
+        csv_content = self.storage.get_csv(src)
         if not csv_content:
             return 0
         
