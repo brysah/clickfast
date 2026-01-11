@@ -5,7 +5,7 @@ import boto3
 from botocore.client import Config
 from io import StringIO, BytesIO
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import pytz
 from config import settings
@@ -92,27 +92,28 @@ class R2Storage:
 
 
 class CSVHandler:
-        def create_empty_source(self, src: str) -> bool:
-            """
-            Cria um CSV vazio (apenas com header) para um src (conta), caso ainda não exista.
-            Retorna True se criado com sucesso ou já existir, False em caso de erro.
-            """
-            existing_csv = self.storage.get_csv(src)
-            if existing_csv:
-                # Já existe, não sobrescreve
-                return True
-            header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
-            try:
-                return self.storage.save_csv(src, header)
-            except Exception as e:
-                print(f"Erro ao criar CSV vazio para {src}: {e}")
-                return False
     """Handles CSV operations for Google Ads conversions"""
     
     def __init__(self):
         """Initialize CSV handler with R2 storage"""
         self.storage = R2Storage()
         self.timezone = pytz.timezone(settings.TIMEZONE)
+    
+    def create_empty_source(self, src: str) -> bool:
+        """
+        Cria um CSV vazio (apenas com header) para um src (conta), caso ainda não exista.
+        Retorna True se criado com sucesso ou já existir, False em caso de erro.
+        """
+        existing_csv = self.storage.get_csv(src)
+        if existing_csv:
+            # Já existe, não sobrescreve
+            return True
+        header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
+        try:
+            return self.storage.save_csv(src, header)
+        except Exception as e:
+            print(f"Erro ao criar CSV vazio para {src}: {e}")
+            return False
     
     def add_conversion(self, src: str, gclid: str, conversion_time: str, 
                       conversion_value: Optional[float] = None) -> bool:
@@ -227,21 +228,153 @@ class CSVHandler:
             print(f"Error listing customer IDs: {e}")
             return []
     
-    def get_conversion_count(self, src: str) -> int:
+    def get_conversion_count(self, src: str) -> Dict[str, int]:
         """
         Get number of conversions for a customer ID
+        Returns separate counts for recent and archived conversions
         
         Args:
-            ctid: Customer ID
+            src: Customer ID
             
         Returns:
-            Number of conversions
+            Dict with 'recent', 'history', and 'total' counts
+        """
+        # Count recent conversions
+        recent_csv = self.storage.get_csv(src)
+        recent_count = 0
+        if recent_csv:
+            lines = recent_csv.strip().split('\n')
+            data_lines = [line for line in lines if not line.startswith('Parameters:') and not line.startswith('Google Click ID') and line.strip()]
+            recent_count = len(data_lines)
+        
+        # Count archived conversions
+        history_csv = self.storage.get_csv(f"{src}_history")
+        history_count = 0
+        if history_csv:
+            lines = history_csv.strip().split('\n')
+            data_lines = [line for line in lines if not line.startswith('Parameters:') and not line.startswith('Google Click ID') and line.strip()]
+            history_count = len(data_lines)
+        
+        return {
+            'recent': recent_count,
+            'history': history_count,
+            'total': recent_count + history_count
+        }
+    
+    def cleanup_old_conversions(self, src: str, hours: int = 25) -> Dict[str, int]:
+        """
+        Archive conversions older than specified hours
+        
+        Args:
+            src: Customer ID
+            hours: Number of hours (default: 25)
+            
+        Returns:
+            Dict with 'archived' and 'remaining' counts
         """
         csv_content = self.storage.get_csv(src)
         if not csv_content:
-            return 0
+            return {'archived': 0, 'remaining': 0}
+        
+        cutoff_time = datetime.now(self.timezone) - timedelta(hours=hours)
         
         lines = csv_content.strip().split('\n')
-        # Count data lines (exclude header and parameter lines)
-        data_lines = [line for line in lines if not line.startswith('Parameters:') and not line.startswith('Google Click ID') and line.strip()]
-        return len(data_lines)
+        header_line = None
+        recent_rows = []
+        old_rows = []
+        
+        for line in lines:
+            # Keep header
+            if line.startswith('Google Click ID'):
+                header_line = line
+                continue
+            
+            # Skip parameter lines and empty lines
+            if line.startswith('Parameters:') or not line.strip():
+                continue
+            
+            # Parse conversion time from CSV row
+            try:
+                parts = line.split(',')
+                if len(parts) >= 3:
+                    conversion_time_str = parts[2]  # Conversion Time is 3rd column
+                    # Parse datetime (format: yyyy-MM-dd HH:mm:ss)
+                    conversion_time = datetime.strptime(conversion_time_str, '%Y-%m-%d %H:%M:%S')
+                    # Make timezone aware
+                    conversion_time = self.timezone.localize(conversion_time)
+                    
+                    if conversion_time < cutoff_time:
+                        old_rows.append(line)
+                    else:
+                        recent_rows.append(line)
+                else:
+                    # Malformed row, keep it in recent to be safe
+                    recent_rows.append(line)
+            except Exception as e:
+                print(f"Error parsing conversion time: {e}, keeping row in recent")
+                recent_rows.append(line)
+        
+        # Save recent conversions back to main CSV
+        if header_line:
+            recent_csv = header_line + '\n' + '\n'.join(recent_rows) if recent_rows else header_line
+        else:
+            recent_csv = '\n'.join(recent_rows)
+        
+        self.storage.save_csv(src, recent_csv)
+        
+        # Append old conversions to history
+        if old_rows:
+            self._append_to_history(src, old_rows)
+        
+        print(f"🧹 Cleanup for {src}: {len(old_rows)} archived, {len(recent_rows)} remaining")
+        
+        return {
+            'archived': len(old_rows),
+            'remaining': len(recent_rows)
+        }
+    
+    def _append_to_history(self, src: str, rows: List[str]) -> bool:
+        """
+        Append conversion rows to history CSV
+        
+        Args:
+            src: Customer ID
+            rows: List of CSV rows to append
+            
+        Returns:
+            True if successful
+        """
+        history_key = f"{src}_history"
+        existing_history = self.storage.get_csv(history_key)
+        
+        if existing_history:
+            # Append to existing history
+            updated_history = existing_history.strip() + '\n' + '\n'.join(rows)
+        else:
+            # Create new history file with header
+            header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency"
+            updated_history = header + '\n' + '\n'.join(rows)
+        
+        return self.storage.save_csv(history_key, updated_history)
+    
+    def cleanup_all_sources(self, hours: int = 25) -> Dict[str, Dict[str, int]]:
+        """
+        Execute cleanup for all customer IDs
+        Used by automatic scheduler
+        
+        Args:
+            hours: Number of hours threshold
+            
+        Returns:
+            Dict mapping src to cleanup results
+        """
+        sources = self.get_all_sources()
+        results = {}
+        
+        for src in sources:
+            # Skip history files
+            if src.endswith('_history'):
+                continue
+            results[src] = self.cleanup_old_conversions(src, hours)
+        
+        return results

@@ -144,6 +144,22 @@
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
         
+        .csv-link-secondary {
+            display: inline-block;
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .csv-link-secondary:hover {
+            background: #5a6268;
+            transform: scale(1.05);
+        }
+        
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -188,6 +204,14 @@
         
         <div class="stats-grid">
             <div class="stat-card">
+                <div class="stat-number">{{ total_recent }}</div>
+                <div class="stat-label">Conversões Recentes (25h)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ total_history }}</div>
+                <div class="stat-label">Conversões Arquivadas</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-number">{{ total_conversions }}</div>
                 <div class="stat-label">Total de Conversões</div>
             </div>
@@ -199,6 +223,12 @@
         
         <div class="accounts-section">
             <h2>Contas Google Ads</h2>
+
+            <!-- Info banner sobre limpeza automática -->
+            <div style="background: #e3f2fd; border-left: 4px solid #2196F3; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                <strong>ℹ️ Limpeza Automática:</strong> Todo dia às 01:30 (GMT-03:00)<br>
+                <span style="color: #666; font-size: 0.9em;">📊 Vendas com mais de 25 horas são automaticamente arquivadas</span>
+            </div>
 
             <!-- Formulário para adicionar nova conta -->
             <form method="post" action="/add-source" style="margin-bottom: 30px; display: flex; gap: 10px; align-items: center;">
@@ -215,11 +245,16 @@
                 <div class="account-card">
                     <div class="account-header">
                         <div class="account-id">🎯 Conta: {{ account.src }}</div>
-                        <div class="conversion-count">{{ account.count }} conversões</div>
+                        <div class="conversion-count">{{ account.recent_count }} recentes | {{ account.history_count }} arquivadas</div>
                     </div>
-                    <a href="{{ account.csv_url }}" class="csv-link" target="_blank">
-                        📥 Download CSV
-                    </a>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <a href="{{ account.csv_url }}" class="csv-link" target="_blank">
+                            📥 CSV Ativo (Google Ads)
+                        </a>
+                        <a href="{{ account.history_url }}" class="csv-link-secondary" target="_blank">
+                            📜 Ver Histórico
+                        </a>
+                    </div>
                 </div>
                 {% endfor %}
             {% else %}

@@ -60,3 +60,19 @@ class ConversionResponse(BaseModel):
     ctid: str
     gclid: str
     csv_url: str
+
+
+class ConversionStats(BaseModel):
+    """Statistics for conversions"""
+    recent: int = Field(..., description="Recent conversions (last 25 hours)")
+    history: int = Field(..., description="Archived conversions")
+    total: int = Field(..., description="Total conversions")
+
+
+class CleanupResponse(BaseModel):
+    """Response for cleanup operations"""
+    success: bool
+    src: str
+    archived: int = Field(..., description="Number of conversions archived")
+    remaining: int = Field(..., description="Number of conversions remaining")
+    message: str
