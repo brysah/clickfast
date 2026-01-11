@@ -32,18 +32,18 @@ async def dashboard(request: Request, username: str = Depends(authenticate_dashb
     """Dashboard de monitoramento com autenticação segura"""
     try:
         # Get all customer IDs
-        customer_ids = csv_handler.get_all_customer_ids()
+        sources = csv_handler.get_all_sources()
         
         # Get conversion counts
         stats = []
         total_conversions = 0
         
-        for ctid in customer_ids:
-            count = csv_handler.get_conversion_count(ctid)
+        for src in sources:
+            count = csv_handler.get_conversion_count(src)
             total_conversions += count
-            csv_url = csv_handler.get_csv_url(ctid)
+            csv_url = csv_handler.get_csv_url(src)
             stats.append({
-                'ctid': ctid,
+                'src': src,
                 'count': count,
                 'csv_url': csv_url
             })
@@ -56,7 +56,7 @@ async def dashboard(request: Request, username: str = Depends(authenticate_dashb
             {
                 "request": request,
                 "total_conversions": total_conversions,
-                "total_accounts": len(customer_ids),
+                "total_accounts": len(sources),
                 "stats": stats,
                 "app_name": settings.APP_NAME,
                 "authenticated_user": username
@@ -116,10 +116,19 @@ async def receive_postback(
             utmTerm=utmTerm,
             upsellNo=upsellNo
         )
-        
+
+        # Só aceitar vendas vindas do Google
+        if not postback.utmSource or postback.utmSource.lower() != 'google':
+            raise HTTPException(status_code=400, detail="Conversão rejeitada: utm_source diferente de 'google'.")
+        # (Opcional) Validar utm_medium e utm_campaign se quiser mais restrição
+        # if not postback.utmMedium or postback.utmMedium.lower() != 'cpc':
+        #     raise HTTPException(status_code=400, detail="Conversão rejeitada: utm_medium diferente de 'cpc'.")
+        # if not postback.utmCampaign:
+        #     raise HTTPException(status_code=400, detail="Conversão rejeitada: utm_campaign não informado.")
+
         # Use provided datetime or current time
         conversion_time = postback.dateTime if postback.dateTime else datetime.utcnow().isoformat()
-        
+
         # Add conversion to CSV
         success = csv_handler.add_conversion(
             ctid=postback.ctid,
