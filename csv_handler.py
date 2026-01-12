@@ -31,7 +31,7 @@ class R2Storage:
         Retrieve CSV content from R2
         
         Args:
-            ctid: Customer ID
+            src: Source/Account ID
             
         Returns:
             CSV content as string, or None if file doesn't exist
@@ -43,7 +43,7 @@ class R2Storage:
         except self.s3_client.exceptions.NoSuchKey:
             return None
         except Exception as e:
-            print(f"Error retrieving CSV for {ctid}: {e}")
+            print(f"Error retrieving CSV for {src}: {e}")
             return None
     
     def save_csv(self, src: str, csv_content: str) -> bool:
@@ -51,7 +51,7 @@ class R2Storage:
         Save CSV content to R2
         
         Args:
-            ctid: Customer ID
+            src: Source/Account ID
             csv_content: CSV content as string
             
         Returns:
@@ -67,7 +67,7 @@ class R2Storage:
             )
             return True
         except Exception as e:
-            print(f"Error saving CSV for {ctid}: {e}")
+            print(f"Error saving CSV for {src}: {e}")
             return False
     
     def get_public_url(self, src: str) -> str:
@@ -76,10 +76,10 @@ class R2Storage:
         Compatible with Google Ads (ends in .csv)
         
         Args:
-            ctid: Customer ID
+            src: Source/Account ID
             
         Returns:
-            Public URL to access the CSV (format: /csv/{api_key}/{ctid}.csv)
+            Public URL to access the CSV (format: /csv/{api_key}/{src}.csv)
         """
         # For Railway or production, you'll need to set APP_URL environment variable
         # Example: https://seu-app.railway.app
@@ -121,7 +121,7 @@ class CSVHandler:
         Add a conversion to the CSV file
         
         Args:
-            ctid: Customer ID
+            src: Source/Account ID
             gclid: Google Click ID
             conversion_time: ISO 8601 datetime string
             conversion_value: Optional conversion value
@@ -183,10 +183,10 @@ class CSVHandler:
     
     def get_csv_content(self, src: str) -> Optional[str]:
         """
-        Get CSV content for a customer ID
+        Get CSV content for a source/account ID
         
         Args:
-            ctid: Customer ID
+            src: Source/Account ID
             
         Returns:
             CSV content as string, or None if not found
@@ -198,7 +198,7 @@ class CSVHandler:
         Get public URL for CSV file
         
         Args:
-            ctid: Customer ID
+            src: Source/Account ID
             
         Returns:
             Public URL

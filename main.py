@@ -191,7 +191,7 @@ async def add_source(request: Request, src: str = Form(...), username: str = Dep
 @app.post("/postback")
 async def receive_postback(
     gclid: str = Query(..., description="Google Click ID"),
-    ctid: str = Query(..., description="Customer ID do Google Ads"),
+    src: str = Query(..., description="Source/Account ID"),
     orderId: Optional[str] = Query(None),
     commission: Optional[float] = Query(None),
     productName: Optional[str] = Query(None),
@@ -209,7 +209,7 @@ async def receive_postback(
     
     Parâmetros obrigatórios:
     - gclid: Google Click ID
-    - ctid: Customer ID do Google Ads
+    - src: Source/Account ID
     
     Parâmetros opcionais:
     - commission: Valor da comissão
@@ -220,7 +220,7 @@ async def receive_postback(
         # Validate request using Pydantic model
         postback = PostbackRequest(
             gclid=gclid,
-            ctid=ctid,
+            src=src,
             orderId=orderId,
             commission=commission,
             productName=productName,
@@ -248,7 +248,7 @@ async def receive_postback(
 
         # Add conversion to CSV
         success = csv_handler.add_conversion(
-            ctid=postback.ctid,
+            src=postback.src,
             gclid=postback.gclid,
             conversion_time=conversion_time,
             conversion_value=postback.commission
@@ -258,18 +258,18 @@ async def receive_postback(
             raise HTTPException(status_code=500, detail="Erro ao salvar conversão")
         
         # Get CSV URL
-        csv_url = csv_handler.get_csv_url(postback.ctid)
+        csv_url = csv_handler.get_csv_url(postback.src)
         
         # Log success
-        print(f"✅ Conversão recebida - CTID: {postback.ctid}, GCLID: {postback.gclid}, Valor: {postback.commission}")
+        print(f"✅ Conversão recebida - SRC: {postback.src}, GCLID: {postback.gclid}, Valor: {postback.commission}")
         
         # Get conversion counts
-        counts = csv_handler.get_conversion_count(postback.ctid)
+        counts = csv_handler.get_conversion_count(postback.src)
         
         return ConversionResponse(
             success=True,
-            message=f"Conversão registrada com sucesso! Total de conversões para conta {postback.ctid}: {counts['total']}",
-            ctid=postback.ctid,
+            message=f"Conversão registrada com sucesso! Total de conversões para conta {postback.src}: {counts['total']}",
+            src=postback.src,
             gclid=postback.gclid,
             csv_url=csv_url
         )
@@ -282,10 +282,10 @@ async def receive_postback(
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 
-@app.get("/csv/{api_key}/{ctid}.csv")
+@app.get("/csv/{api_key}/{src}.csv")
 async def get_csv(
     api_key: str,
-    ctid: str
+    src: str
 ):
     """
     Retorna o CSV para uma conta específica
@@ -293,29 +293,29 @@ async def get_csv(
     
     Parâmetros:
     - api_key: Chave de API para autenticação (no path)
-    - ctid: Customer ID do Google Ads
+    - src: Source/Account ID
     
     Exemplo: /csv/sua-api-key/7871141994.csv
     """
     # Validate API key
     if api_key != settings.API_KEY:
-        print(f"❌ Tentativa de acesso não autorizado ao CSV {ctid} com API key inválida")
+        print(f"❌ Tentativa de acesso não autorizado ao CSV {src} com API key inválida")
         raise HTTPException(status_code=401, detail="API Key inválida")
     
     # Get CSV content
-    csv_content = csv_handler.get_csv_content(ctid)
+    csv_content = csv_handler.get_csv_content(src)
     
     if csv_content is None:
-        raise HTTPException(status_code=404, detail=f"CSV não encontrado para conta {ctid}")
+        raise HTTPException(status_code=404, detail=f"CSV não encontrado para conta {src}")
     
-    print(f"📥 CSV acessado com sucesso - CTID: {ctid}")
+    print(f"📥 CSV acessado com sucesso - SRC: {src}")
     
     # Return CSV as downloadable file
     return Response(
         content=csv_content,
         media_type="text/csv",
         headers={
-            "Content-Disposition": f"attachment; filename={ctid}.csv"
+            "Content-Disposition": f"attachment; filename={src}.csv"
         }
     )
 
@@ -352,10 +352,10 @@ async def manual_cleanup(
         raise HTTPException(status_code=500, detail=f"Erro ao executar limpeza: {str(e)}")
 
 
-@app.get("/csv/{api_key}/{ctid}_history.csv")
+@app.get("/csv/{api_key}/{src}_history.csv")
 async def get_history_csv(
     api_key: str,
-    ctid: str
+    src: str
 ):
     """
     Return history CSV for a specific account
@@ -363,29 +363,29 @@ async def get_history_csv(
     
     Args:
         api_key: API key for authentication (in path)
-        ctid: Customer ID
+        src: Source/Account ID
     
     Example: /csv/your-api-key/7871141994_history.csv
     """
     # Validate API key
     if api_key != settings.API_KEY:
-        print(f"❌ Tentativa de acesso não autorizado ao histórico {ctid} com API key inválida")
+        print(f"❌ Tentativa de acesso não autorizado ao histórico {src} com API key inválida")
         raise HTTPException(status_code=401, detail="API Key inválida")
     
     # Get history CSV content
-    csv_content = csv_handler.get_csv_content(f"{ctid}_history")
+    csv_content = csv_handler.get_csv_content(f"{src}_history")
     
     if csv_content is None:
-        raise HTTPException(status_code=404, detail=f"Histórico não encontrado para conta {ctid}")
+        raise HTTPException(status_code=404, detail=f"Histórico não encontrado para conta {src}")
     
-    print(f"📜 Histórico acessado com sucesso - CTID: {ctid}")
+    print(f"📜 Histórico acessado com sucesso - SRC: {src}")
     
     # Return CSV as downloadable file
     return Response(
         content=csv_content,
         media_type="text/csv",
         headers={
-            "Content-Disposition": f"attachment; filename={ctid}_history.csv"
+            "Content-Disposition": f"attachment; filename={src}_history.csv"
         }
     )
 

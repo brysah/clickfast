@@ -11,7 +11,7 @@ class PostbackRequest(BaseModel):
     
     # Required fields
     gclid: str = Field(..., description="Google Click ID", min_length=1)
-    ctid: str = Field(..., description="Google Ads Customer ID", min_length=1)
+    src: str = Field(..., description="Source/Account ID", min_length=1)
     
     # Transaction details
     orderId: Optional[str] = None
@@ -30,13 +30,13 @@ class PostbackRequest(BaseModel):
     # Upsell info
     upsellNo: Optional[int] = Field(None, ge=0)
     
-    @field_validator('ctid')
+    @field_validator('src')
     @classmethod
-    def validate_ctid(cls, v: str) -> str:
-        """Validate that ctid contains only digits and hyphens"""
+    def validate_src(cls, v: str) -> str:
+        """Validate that src contains only digits and hyphens"""
         cleaned = v.replace('-', '')
         if not cleaned.isdigit():
-            raise ValueError('ctid must contain only digits (hyphens are allowed)')
+            raise ValueError('src must contain only digits (hyphens are allowed)')
         return cleaned  # Return without hyphens for consistency
     
     @field_validator('dateTime')
@@ -57,7 +57,7 @@ class ConversionResponse(BaseModel):
     """Response model for successful conversion"""
     success: bool
     message: str
-    ctid: str
+    src: str
     gclid: str
     csv_url: str
 
