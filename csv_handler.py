@@ -108,7 +108,7 @@ class CSVHandler:
         if existing_csv:
             # Já existe, não sobrescreve
             return True
-        header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
+        header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency,Order ID\n"
         try:
             return self.storage.save_csv(src, header)
         except Exception as e:
