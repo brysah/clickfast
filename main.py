@@ -37,16 +37,16 @@ scheduler = BackgroundScheduler(timezone=pytz.timezone('America/Sao_Paulo'))
 @app.on_event("startup")
 async def startup_event():
     """Start scheduler when application starts"""
-    # Execute cleanup every day at 01:30 (GMT-03:00)
+    # Execute cleanup every day at 12:30 (GMT-03:00)
     scheduler.add_job(
         run_cleanup,
-        CronTrigger(hour=1, minute=30, timezone='America/Sao_Paulo'),
+        CronTrigger(hour=12, minute=30, timezone='America/Sao_Paulo'),
         id='daily_cleanup',
         name='Limpeza diária de conversões antigas',
         replace_existing=True
     )
     scheduler.start()
-    print("✅ Scheduler iniciado - Limpeza automática configurada para 01:30 (GMT-03:00)")
+    print("✅ Scheduler iniciado - Limpeza automática configurada para 12:30 (GMT-03:00)")
 
 
 @app.on_event("shutdown")
