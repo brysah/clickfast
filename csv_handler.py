@@ -116,7 +116,8 @@ class CSVHandler:
             return False
     
     def add_conversion(self, src: str, gclid: str, conversion_time: str, 
-                      conversion_value: Optional[float] = None) -> bool:
+                      conversion_value: Optional[float] = None,
+                      order_id: Optional[str] = None) -> bool:
         """
         Add a conversion to the CSV file
         
@@ -125,6 +126,7 @@ class CSVHandler:
             gclid: Google Click ID
             conversion_time: ISO 8601 datetime string
             conversion_value: Optional conversion value
+            order_id: Optional order ID
             
         Returns:
             True if successful, False otherwise
@@ -152,17 +154,19 @@ class CSVHandler:
             header_lines = [line for line in lines if line.startswith('Google Click ID')]
             data_lines = [line for line in lines if not line.startswith('Parameters:') and not line.startswith('Google Click ID') and line.strip()]
             value = str(conversion_value) if conversion_value is not None else ""
-            new_row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY}"
+            order_id_value = order_id if order_id else ""
+            new_row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY},{order_id_value}"
             csv_content = '\n'.join(header_lines) + '\n' + '\n'.join(data_lines + [new_row])
         else:
             # Create new CSV with header
-            csv_content = self._create_new_csv(gclid, formatted_time, conversion_value)
+            csv_content = self._create_new_csv(gclid, formatted_time, conversion_value, order_id)
         
         # Save to R2
         return self.storage.save_csv(src, csv_content)
     
     def _create_new_csv(self, gclid: str, formatted_time: str, 
-                       conversion_value: Optional[float] = None) -> str:
+                       conversion_value: Optional[float] = None,
+                       order_id: Optional[str] = None) -> str:
         """
         Create a new CSV with header and first row
         Following Google Ads official format specification
@@ -171,14 +175,16 @@ class CSVHandler:
             gclid: Google Click ID
             formatted_time: Formatted datetime string (yyyy-MM-dd HH:mm:ss)
             conversion_value: Optional conversion value
+            order_id: Optional order ID
             
         Returns:
             CSV content as string
         """
-        # Header without Parameters:TimeZone (Google Ads format)
-        header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\n"
+        # Header with Order ID (Google Ads format)
+        header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency,Order ID\n"
         value = str(conversion_value) if conversion_value is not None else ""
-        row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY}"
+        order_id_value = order_id if order_id else ""
+        row = f"{gclid},{settings.CONVERSION_NAME},{formatted_time},{value},{settings.CURRENCY},{order_id_value}"
         return header + row
     
     def get_csv_content(self, src: str) -> Optional[str]:
@@ -352,7 +358,7 @@ class CSVHandler:
             updated_history = existing_history.strip() + '\n' + '\n'.join(rows)
         else:
             # Create new history file with header
-            header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency"
+            header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency,Order ID\n"
             updated_history = header + '\n' + '\n'.join(rows)
         
         return self.storage.save_csv(history_key, updated_history)
