@@ -119,74 +119,74 @@ async def dashboard(request: Request, username: str = Depends(authenticate_dashb
                 "app_name": settings.APP_NAME,
                 "authenticated_user": username
             }
-        )\r
-    except Exception as e:\r
-        print(f"❌ Error loading dashboard: {e}")\r
-        return HTMLResponse(\r
-            content=f"<h1>Error loading dashboard</h1><p>{str(e)}</p>",\r
-            status_code=500\r
-        )\r
-\r
-\r
-@app.post("/add-source")\r
-async def add_source(request: Request, src: str = Form(...), username: str = Depends(authenticate_dashboard)):\r
-    """Adiciona uma nova conta (src) criando um CSV vazio se não existir."""\r
-    try:\r
-        created = csv_handler.create_empty_source(src)\r
-        if created:\r
-            msg = f"Conta '{src}' adicionada com sucesso."\r
-        else:\r
-            msg = f"Erro ao adicionar conta '{src}'."\r
-        \r
-        # Recarrega dashboard com mensagem\r
-        sources = csv_handler.get_all_sources()\r
-        stats = []\r
-        total_conversions = 0\r
-        total_recent = 0\r
-        total_history = 0\r
-        \r
-        for s in sources:\r
-            # Skip history files\r
-            if s.endswith('_history'):\r
-                continue\r
-                \r
-            counts = csv_handler.get_conversion_count(s)\r
-            total_conversions += counts['total']\r
-            total_recent += counts['recent']\r
-            total_history += counts['history']\r
-            csv_url = csv_handler.get_csv_url(s)\r
-            history_url = csv_handler.get_csv_url(f"{s}_history")\r
-            stats.append({\r
-                'src': s,\r
-                'recent_count': counts['recent'],\r
-                'history_count': counts['history'],\r
-                'total_count': counts['total'],\r
-                'csv_url': csv_url,\r
-                'history_url': history_url\r
-            })\r
-        \r
-        return templates.TemplateResponse(\r
-            "index.html",\r
-            {\r
-                "request": request,\r
-                "total_conversions": total_conversions,\r
-                "total_recent": total_recent,\r
-                "total_history": total_history,\r
-                "total_accounts": len(stats),\r
-                "stats": stats,\r
-                "app_name": settings.APP_NAME,\r
-                "authenticated_user": username,\r
-                "add_source_msg": msg\r
-            }\r
-        )\r
-    except Exception as e:\r
-        print(f"❌ Erro ao adicionar conta: {e}")\r
-        return HTMLResponse(\r
-            content=f"<h1>Erro ao adicionar conta</h1><p>{str(e)}</p>",\r
-            status_code=500\r
-        )\r
-\r
-\r
+        )
+    except Exception as e:
+        print(f"❌ Error loading dashboard: {e}")
+        return HTMLResponse(
+            content=f"<h1>Error loading dashboard</h1><p>{str(e)}</p>",
+            status_code=500
+        )
+
+
+@app.post("/add-source")
+async def add_source(request: Request, src: str = Form(...), username: str = Depends(authenticate_dashboard)):
+    """Adiciona uma nova conta (src) criando um CSV vazio se não existir."""
+    try:
+        created = csv_handler.create_empty_source(src)
+        if created:
+            msg = f"Conta '{src}' adicionada com sucesso."
+        else:
+            msg = f"Erro ao adicionar conta '{src}'."
+        
+        # Recarrega dashboard com mensagem
+        sources = csv_handler.get_all_sources()
+        stats = []
+        total_conversions = 0
+        total_recent = 0
+        total_history = 0
+        
+        for s in sources:
+            # Skip history files
+            if s.endswith('_history'):
+                continue
+                
+            counts = csv_handler.get_conversion_count(s)
+            total_conversions += counts['total']
+            total_recent += counts['recent']
+            total_history += counts['history']
+            csv_url = csv_handler.get_csv_url(s)
+            history_url = csv_handler.get_csv_url(f"{s}_history")
+            stats.append({
+                'src': s,
+                'recent_count': counts['recent'],
+                'history_count': counts['history'],
+                'total_count': counts['total'],
+                'csv_url': csv_url,
+                'history_url': history_url
+            })
+        
+        return templates.TemplateResponse(
+            "index.html",
+            {
+                "request": request,
+                "total_conversions": total_conversions,
+                "total_recent": total_recent,
+                "total_history": total_history,
+                "total_accounts": len(stats),
+                "stats": stats,
+                "app_name": settings.APP_NAME,
+                "authenticated_user": username,
+                "add_source_msg": msg
+            }
+        )
+    except Exception as e:
+        print(f"❌ Erro ao adicionar conta: {e}")
+        return HTMLResponse(
+            content=f"<h1>Erro ao adicionar conta</h1><p>{str(e)}</p>",
+            status_code=500
+        )
+
+
 @app.get("/postback")
 @app.post("/postback")
 async def receive_postback(
