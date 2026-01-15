@@ -101,18 +101,28 @@ class CSVHandler:
     
     def create_empty_source(self, src: str) -> bool:
         """
-        Cria um CSV vazio (apenas com header) para um src (conta), caso ainda não exista.
+        Cria um CSV com um registro fictício para um src (conta), caso ainda não exista.
+        O registro fictício evita que o Google Ads reclame de arquivo vazio.
         Retorna True se criado com sucesso ou já existir, False em caso de erro.
         """
         existing_csv = self.storage.get_csv(src)
         if existing_csv:
             # Já existe, não sobrescreve
             return True
+        
+        # Cria CSV com header e um registro fictício padrão
         header = "Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency,Order ID\n"
+        
+        # Registro fictício padrão (data antiga para ser removido na próxima limpeza)
+        dummy_time = (datetime.now(self.timezone) - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
+        dummy_row = f"EAIaIQobChMIs6mly9qAkgMV5EFIAB1kbDikEAAYASAAEgK-M_D_BwE,{settings.CONVERSION_NAME},{dummy_time},1074.36,{settings.CURRENCY},44867721\n"
+        
+        csv_content = header + dummy_row
+        
         try:
-            return self.storage.save_csv(src, header)
+            return self.storage.save_csv(src, csv_content)
         except Exception as e:
-            print(f"Erro ao criar CSV vazio para {src}: {e}")
+            print(f"Erro ao criar CSV para {src}: {e}")
             return False
     
     def add_conversion(self, src: str, gclid: str, conversion_time: str, 
@@ -321,8 +331,16 @@ class CSVHandler:
                 recent_rows.append(line)
         
         # Save recent conversions back to main CSV
+        # Se não sobrou nenhum registro recente, adiciona um registro fictício
+        # para evitar que o CSV fique vazio (Google Ads não aceita CSV vazio)
+        if not recent_rows:
+            dummy_time = (datetime.now(self.timezone) - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
+            dummy_row = f"EAIaIQobChMIs6mly9qAkgMV5EFIAB1kbDikEAAYASAAEgK-M_D_BwE,{settings.CONVERSION_NAME},{dummy_time},1074.36,{settings.CURRENCY},44867721"
+            recent_rows = [dummy_row]
+            print(f"⚠️ Nenhum registro recente para {src}, adicionando registro fictício")
+        
         if header_line:
-            recent_csv = header_line + '\n' + '\n'.join(recent_rows) if recent_rows else header_line
+            recent_csv = header_line + '\n' + '\n'.join(recent_rows)
         else:
             recent_csv = '\n'.join(recent_rows)
         
