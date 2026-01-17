@@ -103,9 +103,7 @@ async def dashboard(request: Request, username: str = Depends(authenticate_dashb
                 'csv_url': csv_url,
                 'history_url': history_url
             })
-        
-        # Log successful dashboard access
-        print(f"✅ Dashboard acessado por usuário autenticado: {username}")
+         
         
         return templates.TemplateResponse(
             "index.html",
@@ -309,7 +307,6 @@ async def get_csv(
     if csv_content is None:
         raise HTTPException(status_code=404, detail=f"CSV não encontrado para conta {src}")
     
-    print(f"📥 CSV acessado com sucesso - SRC: {src}")
     
     # Return CSV as downloadable file
     return Response(
@@ -378,8 +375,6 @@ async def get_history_csv(
     
     if csv_content is None:
         raise HTTPException(status_code=404, detail=f"Histórico não encontrado para conta {src}")
-    
-    print(f"📜 Histórico acessado com sucesso - SRC: {src}")
     
     # Return CSV as downloadable file
     return Response(
